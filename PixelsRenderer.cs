@@ -11,7 +11,7 @@ namespace RenderingPipeline
     /// <summary>
     /// Used for effects where individual pixels need to be moved.
     /// </summary>
-    public class PixelsRenderer : AbstractRenderer<SceneRenderTask>
+    public class PixelsRenderer : GenericRenderer<SceneRenderTask>
     {
         private readonly float DistanceFromOrigin = 100f;
         private bool _disposedValue = false;
@@ -20,17 +20,15 @@ namespace RenderingPipeline
         private StaticModel _modelActor;
         private Model _model;
 
-        public PixelsRenderer(MaterialBase material, Int2 size)
+        public PixelsRenderer(MaterialBase material, Int2 size) : base(size)
         {
             if (!material.IsSurface) throw new ArgumentException("Surface Material expected", nameof(material));
-            if (!Material) throw new ArgumentNullException(nameof(material));
+            if (!material) throw new ArgumentNullException(nameof(material));
 
             Material = material;
-            Size = size;
         }
 
         public MaterialBase Material { get; private set; }
-        public Int2 Size { get; }
 
         public override void Initialize()
         {
@@ -41,20 +39,21 @@ namespace RenderingPipeline
             _model.SetupMaterialSlots(1);
             _model.MaterialSlots[0].ShadowsMode = ShadowsCastingMode.None;
             // TODO: Optimize, use instanced rendering and whatnot
-            GenerateGridMesh(_model.LODs[0].Meshes[0], Size);
+            GenerateGridMesh(_model.LODs[0].Meshes[0], _size);
             _modelActor = FlaxEngine.Object.New<StaticModel>();
             _modelActor.Model = _model;
             _modelActor.Entries[0].ReceiveDecals = false;
             _modelActor.Entries[0].ShadowsMode = ShadowsCastingMode.None;
-            _modelActor.LocalPosition = new Vector3(new Vector2(Size.X, Size.Y) * -0.5f, DistanceFromOrigin);
+            _modelActor.LocalPosition = new Vector3(new Vector2(_size.X, _size.Y) * -0.5f, DistanceFromOrigin);
             Task.CustomActors.Add(_modelActor);
             Task.AllowGlobalCustomPostFx = false;
             Task.ActorsSource = ActorsSources.CustomActors;
             Task.View.Mode = ViewMode.Emissive;
             Task.View.Flags = ViewFlags.None;
+            Task.Begin += OnRenderTaskInitialize;
             Task.Begin += OnRenderTaskBegin;
             _output = RenderTarget.New();
-            _output.Init(PixelFormat.R8G8B8A8_UNorm, Size.X, Size.Y);
+            _output.Init(PixelFormat.R8G8B8A8_UNorm, _size.X, _size.Y);
             Task.Output = _output;
             _outputPromise.SetResult(_output);
 
@@ -83,11 +82,20 @@ namespace RenderingPipeline
             return this;
         }
 
-        private void OnRenderTaskBegin(SceneRenderTask task, GPUContext context)
+        private void OnRenderTaskInitialize(SceneRenderTask task, GPUContext context)
         {
             // TODO: Things like getting motion vectors is possible here
             // e.g. _depthBufferPromise.SetResult(task.Buffers.DepthBuffer);
-            Task.Begin -= OnRenderTaskBegin;
+            Task.Begin -= OnRenderTaskInitialize;
+        }
+
+        private void OnRenderTaskBegin(SceneRenderTask task, GPUContext context)
+        {
+            if (_output)
+            {
+                Vector2 size = _output.Size;
+                _modelActor.LocalPosition = new Vector3(size * -0.5f, DistanceFromOrigin);
+            }
         }
 
         private static Camera CreateOrthographicCamera()
@@ -166,6 +174,7 @@ namespace RenderingPipeline
                     if (Task)
                     {
                         // Custom RenderTask disposal code
+                        Task.Begin -= OnRenderTaskInitialize;
                         Task.Begin -= OnRenderTaskBegin;
                     }
                     FlaxEngine.Object.Destroy(ref _output);

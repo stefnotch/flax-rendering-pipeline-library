@@ -8,22 +8,20 @@ using FlaxEngine.Rendering;
 
 namespace RenderingPipeline
 {
-    public class PostFxRenderer : AbstractRenderer<CustomRenderTask>
+    public class PostFxRenderer : GenericRenderer<CustomRenderTask>
     {
         private bool _disposedValue = false;
         private RenderTarget _output;
 
-        public PostFxRenderer(MaterialBase material, Int2 size)
+        public PostFxRenderer(MaterialBase material, Int2 size) : base(size)
         {
             if (!material.IsPostFx) throw new ArgumentException("PostFx Material expected", nameof(material));
-            if (!Material) throw new ArgumentNullException(nameof(material));
+            if (!material) throw new ArgumentNullException(nameof(material));
 
             Material = material;
-            Size = size;
         }
 
         public MaterialBase Material { get; private set; }
-        public Int2 Size { get; }
 
         /// <summary>
         /// The <see cref="RenderTarget"/> that gets post-processed
@@ -33,7 +31,7 @@ namespace RenderingPipeline
         public override void Initialize()
         {
             _output = RenderTarget.New();
-            _output.Init(PixelFormat.R8G8B8A8_UNorm, Size.X, Size.Y);
+            _output.Init(PixelFormat.R8G8B8A8_UNorm, _size.X, _size.Y);
             _outputPromise.SetResult(_output);
 
             Task.Render = OnRender;
