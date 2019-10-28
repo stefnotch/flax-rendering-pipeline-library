@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -45,6 +45,8 @@ namespace RenderingPipeline
             _modelActor.Entries[0].ReceiveDecals = false;
             _modelActor.Entries[0].ShadowsMode = ShadowsCastingMode.None;
             _modelActor.LocalPosition = new Vector3(new Vector2(_size.X, _size.Y) * -0.5f, DistanceFromOrigin);
+            _modelActor.Entries[0].Material = Material;
+            
             Task.CustomActors.Add(_modelActor);
             Task.AllowGlobalCustomPostFx = false;
             Task.ActorsSource = ActorsSources.CustomActors;
@@ -56,12 +58,6 @@ namespace RenderingPipeline
             _output.Init(PixelFormat.R8G8B8A8_UNorm, _size.X, _size.Y);
             Task.Output = _output;
             _outputPromise.SetResult(_output);
-
-            // TODO: Why do we have to wait?
-            Scripting.InvokeOnUpdate(() =>
-            {
-                if (_modelActor) _modelActor.Entries[0].Material = Material;
-            });
 
             Task.Enabled = true;
         }
