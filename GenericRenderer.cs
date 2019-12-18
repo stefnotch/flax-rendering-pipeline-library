@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FlaxEngine;
-using FlaxEngine.Rendering;
 
 namespace RenderingPipeline
 {
@@ -12,12 +11,12 @@ namespace RenderingPipeline
     {
         private bool _disposedValue = false;
 
-        protected TaskCompletionSource<RenderTarget> _outputPromise;
+        protected TaskCompletionSource<GPUTexture> _outputPromise;
         protected readonly Int2 _size;
 
         protected GenericRenderer(Int2 size)
         {
-            Task = RenderTask.Create<RT>();
+            Task = FlaxEngine.Object.New<RT>();
             Task.Enabled = false;
             _size = size;
         }
@@ -26,13 +25,13 @@ namespace RenderingPipeline
 
         public RT Task { get; protected set; }
 
-        public Task<RenderTarget> Output
+        public Task<GPUTexture> Output
         {
             get
             {
                 if (_outputPromise == null)
                 {
-                    _outputPromise = new TaskCompletionSource<RenderTarget>();
+                    _outputPromise = new TaskCompletionSource<GPUTexture>();
                     Initialize();
                 }
 

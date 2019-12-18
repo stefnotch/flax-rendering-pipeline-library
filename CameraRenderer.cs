@@ -4,14 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FlaxEngine;
-using FlaxEngine.Rendering;
 
 namespace RenderingPipeline
 {
     public class CameraRenderer : GenericRenderer<SceneRenderTask>
     {
         private bool _disposedValue = false;
-        private RenderTarget _output;
+        private GPUTexture _output;
 
         public CameraRenderer(Camera camera, Int2 size) : base(size)
         {
@@ -24,8 +23,9 @@ namespace RenderingPipeline
         {
             Task.Camera = Camera;
             Task.Begin += OnRenderTaskInitialize;
-            _output = RenderTarget.New();
-            _output.Init(PixelFormat.R8G8B8A8_UNorm, _size.X, _size.Y);
+            _output = GPUDevice.CreateTexture();
+            var description = GPUTextureDescription.New2D(_size.X, _size.Y, PixelFormat.R8G8B8A8_UNorm);
+            _output.Init(ref description);
             Task.Output = _output;
             _outputPromise.SetResult(_output);
 

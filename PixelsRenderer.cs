@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FlaxEngine;
-using FlaxEngine.Rendering;
 
 namespace RenderingPipeline
 {
@@ -15,7 +14,7 @@ namespace RenderingPipeline
     {
         private readonly float DistanceFromOrigin = 100f;
         private bool _disposedValue = false;
-        private RenderTarget _output;
+        private GPUTexture _output;
         private Camera _orthographicCamera;
         private StaticModel _modelActor;
         private Model _model;
@@ -46,7 +45,7 @@ namespace RenderingPipeline
             _modelActor.Entries[0].ShadowsMode = ShadowsCastingMode.None;
             _modelActor.LocalPosition = new Vector3(new Vector2(_size.X, _size.Y) * -0.5f, DistanceFromOrigin);
             _modelActor.Entries[0].Material = Material;
-            
+
             Task.CustomActors.Add(_modelActor);
             Task.AllowGlobalCustomPostFx = false;
             Task.ActorsSource = ActorsSources.CustomActors;
@@ -54,26 +53,27 @@ namespace RenderingPipeline
             Task.View.Flags = ViewFlags.None;
             Task.Begin += OnRenderTaskInitialize;
             Task.Begin += OnRenderTaskBegin;
-            _output = RenderTarget.New();
-            _output.Init(PixelFormat.R8G8B8A8_UNorm, _size.X, _size.Y);
+            _output = GPUDevice.CreateTexture();
+            var description = GPUTextureDescription.New2D(_size.X, _size.Y, PixelFormat.R8G8B8A8_UNorm);
+            _output.Init(ref description);
             Task.Output = _output;
             _outputPromise.SetResult(_output);
 
             Task.Enabled = true;
         }
 
-        public PixelsRenderer SetInput(string name, Task<RenderTarget> renderTargetTask)
+        public PixelsRenderer SetInput(string name, Task<GPUTexture> renderTargetTask)
         {
             renderTargetTask.ContinueWith((task) => SetInput(name, task.Result), TaskContinuationOptions.NotOnCanceled);
             return this;
         }
 
-        public PixelsRenderer SetInput(string name, RenderTarget renderTarget)
+        public PixelsRenderer SetInput(string name, GPUTexture texture)
         {
             var param = Material.GetParam(name);
             if (param != null)
             {
-                param.Value = renderTarget;
+                param.Value = texture;
             }
             return this;
         }
