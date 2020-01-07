@@ -12,13 +12,15 @@ namespace RenderingPipeline
         private bool _disposedValue = false;
 
         protected TaskCompletionSource<GPUTexture> _outputPromise;
-        protected readonly Int2 _size;
 
-        protected GenericRenderer(Int2 size)
+        protected Int2 _cachedSize;
+        public Func<Int2> SizeGetter { get; set; }
+
+        protected GenericRenderer(Func<Int2> sizeGetter)
         {
             Task = FlaxEngine.Object.New<RT>();
             Task.Enabled = false;
-            _size = size;
+            SizeGetter = sizeGetter;
         }
 
         public string Name { get; set; }

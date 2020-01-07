@@ -12,7 +12,7 @@ namespace RenderingPipeline
         private bool _disposedValue = false;
         private GPUTexture _output;
 
-        public CameraRenderer(Camera camera, Int2 size) : base(size)
+        public CameraRenderer(Camera camera, Func<Int2> sizeGetter) : base(sizeGetter)
         {
             Camera = camera;
         }
@@ -22,9 +22,10 @@ namespace RenderingPipeline
         public override void Initialize()
         {
             Task.Camera = Camera;
-            Task.Begin += OnRenderTaskInitialize;
+            Task.Begin += OnBegin;
             _output = GPUDevice.CreateTexture();
-            var description = GPUTextureDescription.New2D(_size.X, _size.Y, PixelFormat.R8G8B8A8_UNorm);
+            _cachedSize = SizeGetter();
+            var description = GPUTextureDescription.New2D(_cachedSize.X, _cachedSize.Y, PixelFormat.R8G8B8A8_UNorm);
             _output.Init(ref description);
             Task.Output = _output;
             _outputPromise.SetResult(_output);
@@ -32,11 +33,16 @@ namespace RenderingPipeline
             Task.Enabled = true;
         }
 
-        private void OnRenderTaskInitialize(SceneRenderTask task, GPUContext context)
+        private void OnBegin(SceneRenderTask task, GPUContext context)
         {
             // TODO: Things like getting motion vectors is possible here
             // e.g. _depthBufferPromise.SetResult(task.Buffers.DepthBuffer);
-            Task.Begin -= OnRenderTaskInitialize;
+            Int2 size = SizeGetter();
+            if (_cachedSize != size)
+            {
+                _output.Size = new Vector2(size.X, size.Y);
+                _cachedSize = size;
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -48,7 +54,7 @@ namespace RenderingPipeline
                     if (Task)
                     {
                         // Custom RenderTask disposal code
-                        Task.Begin -= OnRenderTaskInitialize;
+                        Task.Begin -= OnBegin;
                     }
                     FlaxEngine.Object.Destroy(ref _output);
                 }

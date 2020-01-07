@@ -12,7 +12,7 @@ namespace RenderingPipeline
         private bool _disposedValue = false;
         private GPUTexture _output;
 
-        public PostFxRenderer(MaterialBase material, Int2 size) : base(size)
+        public PostFxRenderer(MaterialBase material, Func<Int2> sizeGetter) : base(sizeGetter)
         {
             if (!material.IsPostFx) throw new ArgumentException("PostFx Material expected", nameof(material));
             if (!material) throw new ArgumentNullException(nameof(material));
@@ -30,7 +30,8 @@ namespace RenderingPipeline
         public override void Initialize()
         {
             _output = GPUDevice.CreateTexture();
-            var description = GPUTextureDescription.New2D(_size.X, _size.Y, PixelFormat.R8G8B8A8_UNorm);
+            _cachedSize = SizeGetter();
+            var description = GPUTextureDescription.New2D(_cachedSize.X, _cachedSize.Y, PixelFormat.R8G8B8A8_UNorm);
             _output.Init(ref description);
             _outputPromise.SetResult(_output);
 
@@ -68,6 +69,12 @@ namespace RenderingPipeline
 
         private void OnRender(GPUContext context)
         {
+            Int2 size = SizeGetter();
+            if (_cachedSize != size)
+            {
+                _output.Size = new Vector2(size.X, size.Y);
+                _cachedSize = size;
+            }
             context.DrawPostFxMaterial(Material, _output, Input);
         }
 
